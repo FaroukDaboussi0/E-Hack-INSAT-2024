@@ -108,7 +108,6 @@ def get_last_minute_data():
         data = session.query(GasData).filter(GasData.timestamp >= one_minute_ago).all()
         return [d.__dict__ for d in data]
 
-# API endpoint to get last 30 minutes' data
 @app.get("/last-30-minutes")
 def get_last_30_minutes_data():
     with SessionLocal() as session:

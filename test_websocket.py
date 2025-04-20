@@ -3,8 +3,7 @@ import websockets
 import json
 
 async def listen_to_ws():
-    uri = "ws://localhost:8086/ws"  # Make sure this matches your FastAPI server port
-
+    uri = "ws://localhost:8086/ws"  
     try:
         async with websockets.connect(uri) as websocket:
             print("✅ Connected to gas monitoring WebSocket.")
