@@ -37,8 +37,8 @@ means = {
     "checkpoint_2": {
         "location": "Scrubber Input",
         "co2": 0.11,
-        "so2": 0.0035,
-        "hf": 0.00015
+        "so2": 0.00012,
+        "hf": 0.00001
     },
     "checkpoint_3": {
         "location": "Final Emission",
