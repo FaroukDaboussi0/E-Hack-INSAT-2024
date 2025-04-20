@@ -20,13 +20,13 @@ class GasData(Base):
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, index=True)
     checkpoint_name = Column(String, index=True)
+    gas_type = Column(String, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    co2 = Column(Float)
-    so2 = Column(Float)
-    hf = Column(Float)
+    value = Column(Float)
 
 Base.metadata.create_all(bind=engine)
 
+# Define mean values for each checkpoint per gas
 means = {
     "checkpoint_1": {
         "location": "Gas Capture Mechanism Input",
@@ -41,12 +41,6 @@ means = {
         "hf": 0.00015
     },
     "checkpoint_3": {
-        "location": "Transformation Reactor",
-        "co2": 0.10,
-        "so2": 0.001,
-        "hf": 0.00005
-    },
-    "checkpoint_4": {
         "location": "Final Emission",
         "co2": 0.08,
         "so2": 0.00007,
@@ -57,20 +51,21 @@ means = {
 def generate_gas_data(means, std_frac=0.05):
     timestamp = datetime.utcnow()
     data_list = []
-    for i, (checkpoint, data) in enumerate(means.items(), start=1):
-        noisy = {}
-        for gas, mu in data.items():
-            if gas != "location":
-                sigma = abs(mu) * std_frac
-                sample = max(np.random.normal(mu, sigma), 0.0)
-                noisy[gas] = sample
-        checkpoint_data = {
-            "sensor_id": i,
-            "checkpoint_name": data["location"],
-            "timestamp": timestamp,
-            **noisy
-        }
-        data_list.append(checkpoint_data)
+    sensor_id_counter = 1
+    for checkpoint, data in means.items():
+        location = data["location"]
+        for gas in ["co2", "so2", "hf"]:
+            mu = data[gas]
+            sigma = abs(mu) * std_frac
+            sample = max(np.random.normal(mu, sigma), 0.0)
+            data_list.append({
+                "sensor_id": sensor_id_counter,
+                "checkpoint_name": location,
+                "gas_type": gas,
+                "timestamp": timestamp,
+                "value": sample
+            })
+            sensor_id_counter += 1
     return data_list
 
 @app.websocket("/ws")
@@ -87,19 +82,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 gas_entry = GasData(
                     sensor_id=entry["sensor_id"],
                     checkpoint_name=entry["checkpoint_name"],
+                    gas_type=entry["gas_type"],
                     timestamp=entry["timestamp"],
-                    co2=entry["co2"],
-                    so2=entry["so2"],
-                    hf=entry["hf"]
+                    value=entry["value"]
                 )
                 session.add(gas_entry)
-                entry["timestamp"] = entry["timestamp"].isoformat()
-                await websocket.send_json(entry)
+                # Send as JSON to frontend
+                message = {
+                    "sensor_id": entry["sensor_id"],
+                    "checkpoint": entry["checkpoint_name"],
+                    "gas": entry["gas_type"],
+                    "value": entry["value"],
+                    "timestamp": entry["timestamp"].isoformat()
+                }
+                await websocket.send_json(message)
 
             session.commit()
 
         await asyncio.sleep(3)
-
 
 @app.get("/last-minute")
 def get_last_minute_data():
@@ -117,4 +117,4 @@ def get_last_30_minutes_data():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8086, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)

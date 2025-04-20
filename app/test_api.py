@@ -1,7 +1,7 @@
 import requests
 
-url_last_minute = 'http://127.0.0.1:8086/last-minute'
-url_last_30_minutes = 'http://127.0.0.1:8086/last-30-minutes'
+url_last_minute = 'http://localhost:8080/last-minute'
+url_last_30_minutes = 'http://localhost:8080/last-30-minutes'
 
 response_last_minute = requests.get(url_last_minute)
 if response_last_minute.status_code == 200:
